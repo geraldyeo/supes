@@ -1,0 +1,18 @@
+{
+  "name": "geraldyeo",
+  "owner": {
+    "name": "geraldyeo"
+  },
+  "metadata": {
+    "description": "Plugins by geraldyeo",
+    "homepage": "https://github.com/geraldyeo/supes"
+  },
+  "plugins": [
+    {
+      "name": "supes",
+      "version": "0.1.0",
+      "source": ".",
+      "description": "Bridge plugin wiring ECC domain skills into Superpowers pipeline stages — zero config, stack-aware, per-project overrides."
+    }
+  ]
+}
