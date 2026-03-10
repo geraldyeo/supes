@@ -1,18 +1,25 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "geraldyeo",
   "owner": {
     "name": "geraldyeo"
   },
   "metadata": {
     "description": "Plugins by geraldyeo",
-    "homepage": "https://github.com/geraldyeo/supes"
+    "version": "0.1.0"
   },
   "plugins": [
     {
       "name": "supes",
       "version": "0.1.0",
-      "source": ".",
-      "description": "Bridge plugin wiring ECC domain skills into Superpowers pipeline stages — zero config, stack-aware, per-project overrides."
+      "source": "./",
+      "description": "Bridge plugin wiring ECC domain skills into Superpowers pipeline stages — zero config, stack-aware, per-project overrides.",
+      "author": {
+        "name": "geraldyeo"
+      },
+      "homepage": "https://github.com/geraldyeo/supes",
+      "repository": "https://github.com/geraldyeo/supes",
+      "license": "MIT"
     }
   ]
 }
