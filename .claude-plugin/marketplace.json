@@ -6,12 +6,12 @@
   },
   "metadata": {
     "description": "Plugins by geraldyeo",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "plugins": [
     {
       "name": "supes",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "source": "./",
       "description": "Bridge plugin wiring ECC domain skills into Superpowers pipeline stages — zero config, stack-aware, per-project overrides.",
       "author": {
