@@ -1,0 +1,43 @@
+# CLAUDE.md — Supes Block Reference
+
+Copy the block below into your project's CLAUDE.md.
+All lines inside the block are optional. The block itself is optional — Supes works without it via auto-detection.
+
+---
+
+## Minimal (stack override only)
+
+```supes
+stack: python django
+```
+
+## Full override reference
+
+```supes
+# Optional: override auto-detected stack.
+# List any combination of: node react next python django go rust java spring
+stack: python django react
+
+# Additive (default): listed skills are APPENDED to detected defaults.
+# Works for: brainstorm, plan, tdd, review, execute
+tdd: my-custom-testing-skill
+
+# Removal: prefix a skill name with - to remove it from defaults.
+review: -django-security my-stricter-security-skill
+
+# Replace: suffix the key with ! to ignore defaults entirely for that stage.
+tdd!: only-this-one-skill
+
+# You can mix removal and addition on the same line.
+plan: -backend-patterns our-team-planning-skill extra-skill
+```
+
+---
+
+## Notes
+
+- Skill names can come from ECC, Superpowers, other plugins, or your personal ~/.claude/skills/
+- The hook does not validate skill names — unknown names surface naturally as "skill not found"
+- See docs/routing-defaults.md for the full default mapping table
+- Only the first occurrence of each stage key takes effect (e.g. two `tdd:` lines — only the first is used)
+- Set ECC_HOOK_PROFILE=minimal to reduce ambient hook noise (ECC env var, not Supes-specific)

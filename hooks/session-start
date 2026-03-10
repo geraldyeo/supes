@@ -1,0 +1,236 @@
+#!/usr/bin/env bash
+# hooks/session-start
+# Supes bridge plugin — session initialisation
+# Detects project stack, merges supes block from CLAUDE.md, injects routing context.
+
+set -euo pipefail
+
+PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# ── Stack detection ────────────────────────────────────────────────────────────
+
+detect_stack() {
+  local tokens=""
+
+  if [[ -f "package.json" ]]; then
+    tokens="$tokens node"
+    grep -q '"react"' package.json 2>/dev/null && tokens="$tokens react" || true
+    grep -q '"next"'  package.json 2>/dev/null && tokens="$tokens next"  || true
+  fi
+
+  if [[ -f "requirements.txt" || -f "pyproject.toml" ]]; then
+    tokens="$tokens python"
+  fi
+
+  [[ -f "manage.py" ]]            && tokens="$tokens django"  || true
+  [[ -f "go.mod" ]]               && tokens="$tokens go"      || true
+  [[ -f "Cargo.toml" ]]           && tokens="$tokens rust"    || true
+  [[ -f "build.gradle" || -f "pom.xml" ]] && tokens="$tokens java" || true
+
+  if [[ -f "build.gradle" ]]; then
+    grep -qi "spring" build.gradle 2>/dev/null && tokens="$tokens spring" || true
+  fi
+
+  # Trim and deduplicate
+  echo "$tokens" | tr ' ' '\n' | grep -v '^$' | sort -u | tr '\n' ' ' | sed 's/ $//' || true
+}
+
+# ── Default routing lookup ─────────────────────────────────────────────────────
+# Returns space-separated ECC skill names for a given stack + stage.
+# Mirrors docs/routing-defaults.md exactly — update both together.
+
+get_defaults() {
+  local stack="$1" stage="$2"
+
+  case "$stage" in
+    brainstorm)
+      echo "ai-first-engineering"
+      ;;
+    plan)
+      if   [[ "$stack" == *django* ]]; then echo "backend-patterns database-migrations"
+      elif [[ "$stack" == *react* || "$stack" == *next* ]]; then echo "frontend-patterns api-design"
+      elif [[ "$stack" == *spring* ]]; then echo "backend-patterns api-design"
+      elif [[ "$stack" == *node*   ]]; then echo "backend-patterns api-design"
+      else                                  echo "backend-patterns"
+      fi
+      ;;
+    tdd)
+      if   [[ "$stack" == *django* ]]; then echo "django-tdd python-testing django-security"
+      elif [[ "$stack" == *python* ]]; then echo "python-testing"
+      elif [[ "$stack" == *go*     ]]; then echo "golang-testing"
+      elif [[ "$stack" == *react* || "$stack" == *next* ]]; then echo "tdd-workflow e2e-testing"
+      elif [[ "$stack" == *spring* ]]; then echo "springboot-tdd"
+      else                                  echo "tdd-workflow"
+      fi
+      ;;
+    review)
+      if   [[ "$stack" == *python* || "$stack" == *django* ]]; then echo "security-review python-reviewer"
+      elif [[ "$stack" == *go*     ]]; then echo "security-review go-reviewer"
+      elif [[ "$stack" == *spring* ]]; then echo "security-review springboot-security"
+      else                                  echo "security-review"
+      fi
+      ;;
+    execute)
+      echo "multi-execute autonomous-loops"
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
+
+# ── supes block parser ─────────────────────────────────────────────────────────
+# Reads CLAUDE.md, extracts the supes fenced block, applies merge logic.
+# Merge modes: additive (default), removal (-skill), replace (stage!:)
+
+get_stage_skills() {
+  local stack="$1" stage="$2"
+
+  # Validate stage is a known value (prevents grep regex injection)
+  case "$stage" in
+    brainstorm|plan|tdd|review|execute) ;;
+    *) echo "" && return ;;
+  esac
+
+  local defaults
+  defaults=$(get_defaults "$stack" "$stage")
+
+  # No CLAUDE.md — return defaults
+  [[ ! -f "CLAUDE.md" ]] && echo "$defaults" && return
+
+  local block
+  block=$(awk '/^```supes$/,/^```$/' CLAUDE.md | grep -v '^```') || true
+
+  # No supes block — return defaults
+  [[ -z "$block" ]] && echo "$defaults" && return
+
+  # Check for replace mode (stage!:)
+  local replace_line
+  replace_line=$(echo "$block" | grep -E "^${stage}!:" | head -1) || true
+  if [[ -n "$replace_line" ]]; then
+    echo "$replace_line" | sed "s/^${stage}!://" | tr ',' ' ' | xargs
+    return
+  fi
+
+  # Check for additive/removal mode (stage:)
+  local override_line
+  override_line=$(echo "$block" | grep -E "^${stage}:" | head -1) || true
+  if [[ -z "$override_line" ]]; then
+    echo "$defaults"
+    return
+  fi
+
+  local overrides
+  overrides=$(echo "$override_line" | sed "s/^${stage}://" | tr ',' ' ' | xargs)
+
+  # Start from defaults, apply additions and removals
+  local result="$defaults"
+  for token in $overrides; do
+    if [[ "$token" == -* ]]; then
+      local remove="${token#-}"
+      result=$(echo "$result" | tr ' ' '\n' | grep -v "^${remove}$" | tr '\n' ' ' | xargs) || true
+    else
+      result="$result $token"
+    fi
+  done
+
+  echo "$result" | tr ' ' '\n' | grep -v '^$' | sort -u | tr '\n' ' ' | xargs || true
+}
+
+# ── JSON escaping ──────────────────────────────────────────────────────────────
+
+escape_for_json() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '%s' "$s"
+}
+
+# ── Context builder ────────────────────────────────────────────────────────────
+
+build_context() {
+  local stack="$1"
+  local display_stack="${stack:-fallback}"
+
+  local brainstorm_skills plan_skills tdd_skills review_skills execute_skills
+  brainstorm_skills=$(get_stage_skills "$stack" "brainstorm")
+  plan_skills=$(get_stage_skills "$stack" "plan")
+  tdd_skills=$(get_stage_skills "$stack" "tdd")
+  review_skills=$(get_stage_skills "$stack" "review")
+  execute_skills=$(get_stage_skills "$stack" "execute")
+
+  cat <<EOF
+EXTREMELY_IMPORTANT: Supes routing active.
+Stack: ${display_stack}
+
+At each Superpowers stage, invoke the corresponding Supes bridge skill FIRST:
+  brainstorming           → bridge-brainstorm  (ECC: ${brainstorm_skills}, agent: architect)
+  writing-plans           → bridge-plan        (ECC: ${plan_skills}, agent: planner)
+  test-driven-development → bridge-tdd         (ECC: ${tdd_skills}, agent: tdd-guide)
+  requesting-code-review  → bridge-review      (ECC: ${review_skills}, agent: code-reviewer)
+  executing-plans         → bridge-execute     (ECC: ${execute_skills}, agent: chief-of-staff)
+
+ECC ambient hooks active: quality-gate, auto-format, session-memory, cost-tracking.
+EOF
+}
+
+# ── Stack override from supes block ───────────────────────────────────────────
+
+get_stack_override() {
+  if [[ -f "CLAUDE.md" ]]; then
+    local stack_override
+    stack_override=$(awk '/^```supes$/,/^```$/' CLAUDE.md | grep -v '^```' | grep -E '^stack:' | head -1 | sed 's/^stack://' | tr ',' ' ' | xargs || true)
+    if [[ -n "$stack_override" ]]; then
+      echo "$stack_override"
+      return
+    fi
+  fi
+  echo ""
+}
+
+# ── Entry point for --detect-only flag (used by tests) ────────────────────────
+
+# Note: stack override is intentionally not applied here — --detect-only tests file-based detection only
+if [[ "${1:-}" == "--detect-only" ]]; then
+  result=$(detect_stack)
+  [[ -z "$result" ]] && echo "fallback" || echo "$result"
+  exit 0
+fi
+
+# ── Entry point for --parse-only flag (used by tests) ─────────────────────────
+
+if [[ "${1:-}" == "--parse-only" ]]; then
+  stage="${2:-tdd}"
+  stack=$(detect_stack)
+  override=$(get_stack_override)
+  [[ -n "$override" ]] && stack="$override"
+  [[ -z "$stack" ]] && stack="fallback"
+  get_stage_skills "$stack" "$stage"
+  exit 0
+fi
+
+# ── Main ───────────────────────────────────────────────────────────────────────
+
+main() {
+  local stack
+  stack=$(detect_stack)
+
+  # Check for stack: override in supes block
+  local override
+  override=$(get_stack_override)
+  [[ -n "$override" ]] && stack="$override"
+
+  local context
+  context=$(build_context "$stack")
+
+  local escaped
+  escaped=$(escape_for_json "$context")
+
+  printf '{"additionalContext": "%s", "hookSpecificOutput": {"additionalContext": "%s"}}' \
+    "$escaped" "$escaped"
+}
+
+main

@@ -7,7 +7,7 @@ _2026-03-10_
 
 [Everything Claude Code (ECC)](https://github.com/affaan-m/everything-claude-code) provides rich domain capabilities — 65+ skills, 16 specialised agents, ambient quality hooks — but no enforced workflow.
 
-The goal: a thin bridge plugin (`geraldyeo/Supes`) that routes ECC domain capabilities into Superpowers pipeline stages, without forking either repo.
+The goal: a thin bridge plugin (`geraldyeo/supes`) that routes ECC domain capabilities into Superpowers pipeline stages, without forking either repo.
 
 ---
 
@@ -183,7 +183,7 @@ Bridge skills never contain domain knowledge. ECC skill updates flow through aut
 |---|---|---|
 | Superpowers | `/plugin update obra/superpowers` | None — Supes never touches SP files |
 | ECC | `/plugin update affaan-m/everything-claude-code` | None — bridge skills reference by name only |
-| Supes | `/plugin update geraldyeo/Supes` | Updates routing defaults, bridge skills, hooks |
+| Supes | `/plugin update geraldyeo/supes` | Updates routing defaults, bridge skills, hooks |
 | Project `CLAUDE.md` | Edit + commit in project repo | Affects only that project |
 
 **Maintenance risk:** `docs/routing-defaults.md` can go stale if ECC renames skills. Mitigation:
