@@ -1,7 +1,7 @@
 {
   "name": "Supes",
   "id": "geraldyeo/supes",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "Bridge plugin routing ECC domain capabilities into Superpowers pipeline stages. Zero-config stack detection with per-project CLAUDE.md overrides.",
   "author": "geraldyeo",
   "platforms": ["claude-code"]

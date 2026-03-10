@@ -2,11 +2,11 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "",
+        "matcher": "startup|resume",
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/session-start\"",
+            "command": "'${CLAUDE_PLUGIN_ROOT}/hooks/session-start'",
             "description": "Supes: inject stack-aware ECC routing into session context"
           }
         ]
