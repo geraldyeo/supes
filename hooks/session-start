@@ -162,19 +162,13 @@ build_context() {
   review_skills=$(get_stage_skills "$stack" "review")
   execute_skills=$(get_stage_skills "$stack" "execute")
 
-  cat <<EOF
-EXTREMELY_IMPORTANT: Supes routing active.
-Stack: ${display_stack}
-
-At each Superpowers stage, invoke the corresponding Supes bridge skill FIRST:
-  brainstorming           → bridge-brainstorm  (ECC: ${brainstorm_skills}, agent: architect)
-  writing-plans           → bridge-plan        (ECC: ${plan_skills}, agent: planner)
-  test-driven-development → bridge-tdd         (ECC: ${tdd_skills}, agent: tdd-guide)
-  requesting-code-review  → bridge-review      (ECC: ${review_skills}, agent: code-reviewer)
-  executing-plans         → bridge-execute     (ECC: ${execute_skills}, agent: chief-of-staff)
-
-ECC ambient hooks active: quality-gate, auto-format, session-memory, cost-tracking.
-EOF
+  printf 'EXTREMELY_IMPORTANT: Supes routing active.\nStack: %s\n\nAt each Superpowers stage, invoke the corresponding Supes bridge skill FIRST:\n  brainstorming           → bridge-brainstorm  (ECC: %s, agent: architect)\n  writing-plans           → bridge-plan        (ECC: %s, agent: planner)\n  test-driven-development → bridge-tdd         (ECC: %s, agent: tdd-guide)\n  requesting-code-review  → bridge-review      (ECC: %s, agent: code-reviewer)\n  executing-plans         → bridge-execute     (ECC: %s, agent: chief-of-staff)\n\nECC ambient hooks active: quality-gate, auto-format, session-memory, cost-tracking.\n' \
+    "$display_stack" \
+    "$brainstorm_skills" \
+    "$plan_skills" \
+    "$tdd_skills" \
+    "$review_skills" \
+    "$execute_skills"
 }
 
 # ── Stack override from supes block ───────────────────────────────────────────
